@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Présence - Activité</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+  <style>
+    body { font-family: system-ui; }
+    #qrcode { margin: 0 auto; }
+  </style>
+</head>
+<body class="bg-zinc-950 text-white min-h-screen">
+
+  <!-- ====================== ÉCRAN QR (présentateur) ====================== -->
+  <div id="qr-view" class="flex flex-col items-center justify-center min-h-screen p-8">
+    <div class="text-center mb-10">
+      <h1 class="text-5xl font-bold mb-3">📍 Marquer votre présence</h1>
+      <p class="text-xl text-zinc-400">Scannez ce QR code avec votre téléphone</p>
+    </div>
+    
+    <div id="qrcode" class="bg-white p-6 rounded-3xl shadow-2xl"></div>
+    
+    <div class="mt-12 text-center">
+      <p class="text-zinc-500 text-sm">Présentateur : gardez cette page ouverte sur l’écran</p>
+    </div>
+  </div>
+
+  <!-- ====================== ÉCRAN FORMULAIRE ====================== -->
+  <div id="form-view" class="hidden flex flex-col items-center justify-center min-h-screen p-8 bg-zinc-900">
+    <div class="max-w-md w-full bg-zinc-800 rounded-3xl p-10 shadow-2xl">
+      <h1 class="text-4xl font-bold text-center mb-8">👋 Confirmez votre présence</h1>
+      
+      <form id="presence-form" class="space-y-6">
+        <div>
+          <label class="block text-sm font-medium mb-2">Prénom</label>
+          <input type="text" id="prenom" required
+                 class="w-full bg-zinc-700 border border-zinc-600 rounded-xl px-5 py-4 text-lg focus:outline-none focus:border-blue-500">
+        </div>
+        
+        <div>
+          <label class="block text-sm font-medium mb-2">Nom</label>
+          <input type="text" id="nom" required
+                 class="w-full bg-zinc-700 border border-zinc-600 rounded-xl px-5 py-4 text-lg focus:outline-none focus:border-blue-500">
+        </div>
+        
+        <button type="submit"
+                class="w-full bg-blue-600 hover:bg-blue-700 transition py-5 rounded-2xl text-xl font-semibold">
+          ✅ Valider ma présence
+        </button>
+      </form>
+
+      <div id="success" class="hidden mt-6 text-center">
+        <div class="text-6xl mb-4">🎉</div>
+        <p class="text-2xl font-bold text-green-400">Présence enregistrée !</p>
+        <p class="text-zinc-400 mt-2">Merci, vous pouvez fermer cette page.</p>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // ==================== CONFIGURATION (À MODIFIER) ====================
+    const SUPABASE_URL = "postgresql://postgres:[YOUR-PASSWORD]@db.pxilxouiwgfatzwtlrbq.supabase.co:5432/postgres";   // ← Remplace
+    const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InB4aWx4b3Vpd2dmYXR6d3RscmJxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzMzMzY1NDksImV4cCI6MjA4ODkxMjU0OX0.8wqZ69S8mJ_lvw_x0J_SFxFOG37j0TRWQxEOwTpHWEg";                       // ← Remplace par ta clé anon
+    const BASE_URL = "https://ton-site.netlify.app/presence.html"; // ← Mets l'URL finale de ton fichier après hébergement
+
+    // ==================== LOGIQUE D'AFFICHAGE ====================
+    const urlParams = new URLSearchParams(window.location.search);
+    const mode = urlParams.get('mode');
+
+    const qrView = document.getElementById('qr-view');
+    const formView = document.getElementById('form-view');
+
+    if (mode === 'form') {
+      qrView.classList.add('hidden');
+      formView.classList.remove('hidden');
+    } else {
+      // Génère le QR code qui pointe vers le formulaire
+      const formUrl = `${BASE_URL}?mode=form`;
+      new QRCode(document.getElementById("qrcode"), {
+        text: formUrl,
+        width: 420,
+        height: 420,
+        colorDark: "#000000",
+        colorLight: "#ffffff",
+        correctLevel: QRCode.CorrectLevel.H
+      });
+    }
+
+    // ==================== ENVOI VERS SUPABASE ====================
+    document.getElementById('presence-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+
+      const prenom = document.getElementById('prenom').value.trim();
+      const nom = document.getElementById('nom').value.trim();
+
+      const response = await fetch(`${SUPABASE_URL}/rest/v1/presences`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'apikey': SUPABASE_ANON_KEY,
+          'Authorization': `Bearer ${SUPABASE_ANON_KEY}`
+        },
+        body: JSON.stringify({
+          prenom: prenom,
+          nom: nom
+        })
+      });
+
+      if (response.ok) {
+        document.getElementById('presence-form').classList.add('hidden');
+        document.getElementById('success').classList.remove('hidden');
+      } else {
+        alert("Erreur lors de l'enregistrement. Réessaie.");
+      }
+    });
+  </script>
+</body>
+</html>
